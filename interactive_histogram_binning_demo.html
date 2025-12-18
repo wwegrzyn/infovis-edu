@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Histogram binning demo</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 32px;
+      line-height: 1.4;
+    }
+    .controls {
+      margin-bottom: 16px;
+    }
+    svg {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .bar {
+      fill: #69b3a2;
+    }
+    .axis path,
+    .axis line {
+      stroke: #888;
+    }
+  </style>
+</head>
+<body>
+  <h1>How bin size affects a histogram</h1>
+  <p>
+    This example uses the <strong>same dataset</strong>, but changes the histogram
+    <em>bin size</em>. Move the slider to see how different bin widths reveal or hide
+    patterns in the data.
+  </p>
+
+  <div class="controls">
+    <label>
+      Bin width:
+      <input type="range" id="binSlider" min="1" max="20" step="1" value="5" />
+      <span id="binValue">5</span>
+    </label>
+  </div>
+
+  <svg id="chart" width="600" height="360"></svg>
+
+  <script>
+    // Example dataset: slightly skewed distribution
+    const data = Array.from({ length: 200 }, () =>
+      Math.round(d3.randomNormal(50, 15)())
+    ).filter(d => d >= 0 && d <= 100);
+
+    const svg = d3.select('#chart');
+    const width = +svg.attr('width') - 60;
+    const height = +svg.attr('height') - 60;
+
+    const g = svg.append('g').attr('transform', 'translate(40,20)');
+
+    const x = d3.scaleLinear().domain([0, 100]).range([0, width]);
+    const y = d3.scaleLinear().range([height, 0]);
+
+    const xAxis = g.append('g')
+      .attr('class', 'axis')
+      .attr('transform', `translate(0,${height})`)
+      .call(d3.axisBottom(x));
+
+    const yAxis = g.append('g').attr('class', 'axis');
+
+    function update(binWidth) {
+      const thresholds = d3.range(0, 100 + binWidth, binWidth);
+
+      const bins = d3.bin()
+        .domain(x.domain())
+        .thresholds(thresholds)(data);
+
+      y.domain([0, d3.max(bins, d => d.length)]);
+      yAxis.call(d3.axisLeft(y));
+
+      const bars = g.selectAll('.bar').data(bins);
+
+      bars.enter()
+        .append('rect')
+        .attr('class', 'bar')
+        .merge(bars)
+        .attr('x', d => x(d.x0) + 1)
+        .attr('y', d => y(d.length))
+        .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+        .attr('height', d => height - y(d.length));
+
+      bars.exit().remove();
+    }
+
+    const slider = document.getElementById('binSlider');
+    const binValue = document.getElementById('binValue');
+
+    slider.addEventListener('input', () => {
+      const value = +slider.value;
+      binValue.textContent = value;
+      update(value);
+    });
+
+    update(+slider.value);
+  </script>
+</body>
+</html>
