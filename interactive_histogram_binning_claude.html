@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Histogram Binning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f9fafb;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #f3f4f6;
+            padding: 24px;
+            border-radius: 8px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+
+        .slider-section {
+            margin-bottom: 24px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .slider-label {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .bin-count {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: #bfdbfe;
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 300px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .info-card {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .info-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .stat-label {
+            color: #6b7280;
+        }
+
+        .stat-value {
+            font-weight: 500;
+        }
+
+        .effect-text {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        .effect-text p {
+            margin-bottom: 8px;
+        }
+
+        .tip-box {
+            background: #dbeafe;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+
+        .tip-box p {
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.5;
+        }
+
+        .tip-box strong {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Interactive Histogram Binning</h1>
+        <p class="subtitle">Explore how bin size affects the visualization of data distribution</p>
+        
+        <div class="chart-container">
+            <div class="slider-section">
+                <div class="slider-header">
+                    <span class="slider-label">Bin Size: <span id="binValue">5</span> inches</span>
+                    <span class="bin-count"><span id="binCount">0</span> bins</span>
+                </div>
+                <input type="range" id="binSlider" min="1" max="15" step="0.5" value="5">
+                <div class="slider-labels">
+                    <span>Fine (1)</span>
+                    <span>Coarse (15)</span>
+                </div>
+            </div>
+
+            <canvas id="histogram"></canvas>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Dataset Statistics</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Sample Size:</span>
+                    <span class="stat-value" id="sampleSize">200</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Mean Height:</span>
+                    <span class="stat-value" id="meanHeight">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Median Height:</span>
+                    <span class="stat-value" id="medianHeight">0</span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h3>Binning Effects</h3>
+                <div class="effect-text">
+                    <p><strong>Small bins:</strong> Show more detail but may appear noisy</p>
+                    <p><strong>Large bins:</strong> Show general trends but lose detail</p>
+                    <p><strong>Optimal:</strong> Balance between detail and clarity</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tip-box">
+            <p><strong>Try it:</strong> Move the slider to see how different bin sizes reveal or hide patterns in the data. 
+            Notice how very small bins create a jagged appearance, while very large bins oversimplify the distribution.</p>
+        </div>
+    </div>
+
+    <script>
+        // Generate sample dataset - heights in inches (simulating adult heights)
+        function generateData() {
+            const data = [];
+            for (let i = 0; i < 200; i++) {
+                const height = 65 + (Math.random() + Math.random() + Math.random() + Math.random() - 2) * 5;
+                data.push(Math.round(height * 10) / 10);
+            }
+            return data.sort((a, b) => a - b);
+        }
+
+        const rawData = generateData();
+
+        // Calculate statistics
+        function calculateStats(data) {
+            const mean = data.reduce((a, b) => a + b, 0) / data.length;
+            const sorted = [...data].sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            return { mean: mean.toFixed(1), median: median.toFixed(1), count: data.length };
+        }
+
+        const stats = calculateStats(rawData);
+        document.getElementById('sampleSize').textContent = stats.count;
+        document.getElementById('meanHeight').textContent = stats.mean + ' inches';
+        document.getElementById('medianHeight').textContent = stats.median + ' inches';
+
+        // Calculate histogram bins
+        function calculateBins(data, binSize) {
+            const min = Math.floor(Math.min(...data));
+            const max = Math.ceil(Math.max(...data));
+            
+            const bins = [];
+            for (let i = min; i < max; i += binSize) {
+                bins.push({
+                    range: `${i}-${i + binSize}`,
+                    count: 0,
+                    start: i,
+                    end: i + binSize
+                });
+            }
+            
+            data.forEach(value => {
+                const binIndex = Math.floor((value - min) / binSize);
+                if (bins[binIndex]) {
+                    bins[binIndex].count++;
+                }
+            });
+            
+            return bins;
+        }
+
+        // Draw histogram
+        function drawHistogram(bins) {
+            const canvas = document.getElementById('histogram');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Set canvas size accounting for device pixel ratio
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const width = rect.width;
+            const height = rect.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Margins
+            const marginLeft = 50;
+            const marginRight = 20;
+            const marginTop = 20;
+            const marginBottom = 80;
+            
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
+            
+            // Find max count for scaling
+            const maxCount = Math.max(...bins.map(b => b.count));
+            
+            // Draw bars
+            const barWidth = chartWidth / bins.length;
+            const barGap = Math.min(2, barWidth * 0.1);
+            
+            bins.forEach((bin, i) => {
+                const barHeight = (bin.count / maxCount) * chartHeight;
+                const x = marginLeft + i * barWidth;
+                const y = marginTop + chartHeight - barHeight;
+                
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(x + barGap/2, y, barWidth - barGap, barHeight);
+            });
+            
+            // Draw axes
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(marginLeft, marginTop);
+            ctx.lineTo(marginLeft, marginTop + chartHeight);
+            ctx.lineTo(marginLeft + chartWidth, marginTop + chartHeight);
+            ctx.stroke();
+            
+            // Draw Y-axis labels
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            
+            const ySteps = 5;
+            for (let i = 0; i <= ySteps; i++) {
+                const value = Math.round((maxCount / ySteps) * i);
+                const y = marginTop + chartHeight - (chartHeight / ySteps) * i;
+                ctx.fillText(value, marginLeft - 10, y);
+                
+                // Grid lines
+                ctx.strokeStyle = '#f3f4f6';
+                ctx.beginPath();
+                ctx.moveTo(marginLeft, y);
+                ctx.lineTo(marginLeft + chartWidth, y);
+                ctx.stroke();
+            }
+            
+            // Draw X-axis labels
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            
+            const labelStep = Math.max(1, Math.floor(bins.length / 8));
+            bins.forEach((bin, i) => {
+                if (i % labelStep === 0) {
+                    const x = marginLeft + i * barWidth + barWidth / 2;
+                    const y = marginTop + chartHeight + 10;
+                    
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(-Math.PI / 4);
+                    ctx.fillText(bin.range, 0, 0);
+                    ctx.restore();
+                }
+            });
+            
+            // Y-axis label
+            ctx.save();
+            ctx.translate(15, marginTop + chartHeight / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.fillText('Frequency', 0, 0);
+            ctx.restore();
+        }
+
+        // Update histogram
+        function updateHistogram() {
+            const binSize = parseFloat(document.getElementById('binSlider').value);
+            const bins = calculateBins(rawData, binSize);
+            
+            document.getElementById('binValue').textContent = binSize;
+            document.getElementById('binCount').textContent = bins.length;
+            
+            drawHistogram(bins);
+        }
+
+        // Event listeners
+        document.getElementById('binSlider').addEventListener('input', updateHistogram);
+        window.addEventListener('resize', updateHistogram);
+
+        // Initial draw
+        updateHistogram();
+    </script>
+</body>
+</html>
